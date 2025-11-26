@@ -1,11 +1,17 @@
 const express = require('express');
-const { registerUser} = require('../controllers/userController');
+const { registerUser } = require('../controllers/userController');
 const { loginUser } = require('../controllers/userController');
-const router = express.Router(); // create a mini router , so server.js is clean
 
+const userRouter = express.Router(); 
+// Using a router keeps server.js neat and organized
+
+// Route: Create a new user account
 // POST /api/v1/user/signup
-router.post('/signup', registerUser);
+userRouter.post('/signup', registerUser);
 
+// Route: Login existing user
 // POST /api/v1/user/login
-router.post('/login', loginUser);
-module.exports = router; // make it available to server.js
+userRouter.post('/login', loginUser);
+
+// Export router for server.js
+module.exports = userRouter;

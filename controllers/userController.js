@@ -1,75 +1,109 @@
-// User controller: signup and login logic
-const User = require("../models/User");
+// User controller: Handles signup & login processes
+
+const Account = require("../models/User"); // renamed locally only
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-// Signup a new user
-const registerUser = async(req,res)=>{
-    try{
-        console.log("REQUEST BODY:", req.body);
+// REGISTER NEW USER
+const signupAccount = async (req, res) => {
+  try {
+    console.log("REQUEST BODY:", req.body);
 
-        const {username, email, password} = req.body;
-        if(!username || !email || !password){
-            return res.status(400).json({message:"All fields are required"});
-        }
-        const exisitingUser = await User.findOne({$or:[{username}, {email}]});
-        if(exisitingUser){
-            return res.status(400).json({message:"Username or email already exists"});
-        }
+    const { username, email, password } = req.body;
 
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        const newUser = new User({
-            username,
-            email,
-            password: hashedPassword
-        })
-
-        await newUser.save(); // save to db
-        res.status(201).json({message:"User registered successfully", user_id: newUser._id});
-
-        
-    }catch(err){
-        console.error(err);
-        res.status(500).json({ status: false, message: "Server error" });
-    }
-}
-
-const loginUser = async(req,res)=>{
-    try{
-        const{username, email, password }= req.body;
-        if((!username&&!email) || !password){
-            return res.status(400).json({message:"Username/email and password are required"});
-        }
-
-        const user= await User.findOne({ $or:[{username}, {email}] }); 
-        if(!user){
-            return res.status(400).json({status: false, message: "Invalid username/email or password."});
-        }
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if(!isMatch){
-            return res.status(400).json({status: false, message: "Invalid username/email or password."});
-        }
-
-        // generate jwt token
-        const token= jwt.sign(
-            { id: user._id, username:user.username, email:user.email},
-            process.env.JWT_SECRET,
-            {expiresIn: process.env.JWT_EXPIRES_IN }
-        );
-
-        res.status(200).json({
-            message:"Login successful",
-            jwt_token: token,
-        });
-    }catch(err){
-        console.error(err);
-        res.status(500).json({status: false, message: "Server error"+err.message});
+    // Validate required fields
+    if (!username || !email || !password) {
+      return res.status(400).json({ message: "All fields are required" });
     }
 
-}
+    // Check if username or email already exists
+    const duplicate = await Account.findOne({ $or: [{ username }, { email }] });
+    if (duplicate) {
+      return res.status(400).json({ message: "Username or email already exists" });
+    }
 
-// exporting the functions to be used in routes
-module.exports = { registerUser, loginUser };
+    // Hash the password before storing
+    const saltValue = await bcrypt.genSalt(10);
+    const securePass = await bcrypt.hash(password, saltValue);
+
+    // Create new account entry
+    const userDocument = new Account({
+      username,
+      email,
+      password: securePass,
+    });
+
+    await userDocument.save();
+
+    res.status(201).json({
+      message: "User registered successfully",
+      user_id: userDocument._id,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: false, message: "Server error" });
+  }
+};
+
+// LOGIN EXISTING USER
+const authenticateAccount = async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+
+    // Must include either username or email + password
+    if ((!username && !email) || !password) {
+      return res.status(400).json({
+        message: "Username/email and password are required",
+      });
+    }
+
+    // Find user based on username or email
+    const accountMatch = await Account.findOne({
+      $or: [{ username }, { email }],
+    });
+
+    if (!accountMatch) {
+      return res.status(400).json({
+        status: false,
+        message: "Invalid username/email or password.",
+      });
+    }
+
+    // Compare hashed password
+    const passwordMatch = await bcrypt.compare(password, accountMatch.password);
+    if (!passwordMatch) {
+      return res.status(400).json({
+        status: false,
+        message: "Invalid username/email or password.",
+      });
+    }
+
+    // Generate auth token
+    const sessionToken = jwt.sign(
+      {
+        id: accountMatch._id,
+        username: accountMatch.username,
+        email: accountMatch.email,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN }
+    );
+
+    res.status(200).json({
+      message: "Login successful",
+      jwt_token: sessionToken,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      status: false,
+      message: "Server error" + err.message,
+    });
+  }
+};
+
+// Export functionality
+module.exports = {
+  registerUser: signupAccount,
+  loginUser: authenticateAccount,
+};

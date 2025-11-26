@@ -1,16 +1,22 @@
 const multer = require("multer");
 const path = require("path");
 
-// storage configuration
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/");
+// Configure how uploaded files will be stored
+const fileStorageEngine = multer.diskStorage({
+  // Set upload destination folder
+  destination: (req, file, callback) => {
+    callback(null, "uploads/");
   },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname));
+
+  // Create unique filename based on timestamp + original extension
+  filename: (req, file, callback) => {
+    const uniqueName = Date.now() + path.extname(file.originalname);
+    callback(null, uniqueName);
   }
 });
 
-const upload = multer({ storage: storage });
+// Initialize multer with storage rules
+const uploadMiddleware = multer({ storage: fileStorageEngine });
 
-module.exports = upload;
+// Export to use in routes
+module.exports = uploadMiddleware;

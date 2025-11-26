@@ -1,7 +1,8 @@
 const express = require("express");
-const router = express.Router();
-const auth = require("../middleware/auth");
-const upload = require("../middleware/upload");
+const employeeRouter = express.Router();
+
+const verifySession = require("../middleware/auth");     // Renamed locally only
+const fileUpload = require("../middleware/upload");      // Multer middleware
 
 const {
   getAllEmployees,
@@ -12,22 +13,39 @@ const {
   searchEmployees
 } = require("../controllers/employeeController");
 
-// GET all employees
-router.get("/", auth, getAllEmployees);
+// Fetch all employees
+// GET /api/v1/employee/
+employeeRouter.get("/", verifySession, getAllEmployees);
 
-// SEARCH employees
-router.get("/search/by", auth, searchEmployees);
+// Filter employees by query parameters
+// GET /api/v1/employee/search/by
+employeeRouter.get("/search/by", verifySession, searchEmployees);
 
-// GET employee by ID
-router.get("/:eid", auth, getEmployeeById);
+// Fetch a single employee by ID
+// GET /api/v1/employee/:eid
+employeeRouter.get("/:eid", verifySession, getEmployeeById);
 
-// CREATE employee (with image upload)
-router.post("/", auth, upload.single("profileImage"), createEmployee);
+// Create a new employee (with optional profile image)
+// POST /api/v1/employee/
+employeeRouter.post(
+  "/", 
+  verifySession, 
+  fileUpload.single("profileImage"), 
+  createEmployee
+);
 
-// UPDATE employee (with image upload)
-router.put("/:eid", auth, upload.single("profileImage"), updateEmployee);
+// Update employee details (with optional new image)
+// PUT /api/v1/employee/:eid
+employeeRouter.put(
+  "/:eid", 
+  verifySession, 
+  fileUpload.single("profileImage"), 
+  updateEmployee
+);
 
-// DELETE employee
-router.delete("/:eid", auth, deleteEmployee);
+// Remove an employee
+// DELETE /api/v1/employee/:eid
+employeeRouter.delete("/:eid", verifySession, deleteEmployee);
 
-module.exports = router;
+// Export router for server integration
+module.exports = employeeRouter;

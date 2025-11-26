@@ -1,23 +1,25 @@
-// Employee controller: CRUD operations for employees
+// Employee controller: Handles CRUD + Search operations for employee records
 
-const Employee = require("../models/Employee");
+const StaffRecord = require("../models/Employee"); // Renamed local variable only
 
-// GET ALL EMPLOYEES
-const getAllEmployees = async (req, res) => {
+// FETCH ALL EMPLOYEES
+const fetchAllStaff = async (req, res) => {
   try {
-    const employees = await Employee.find();
+    // Pull every staff member from DB
+    const staffList = await StaffRecord.find();
 
+    // Format output for frontend
     return res.status(200).json(
-      employees.map((emp) => ({
-        employee_id: emp._id,
-        first_name: emp.first_name,
-        last_name: emp.last_name,
-        email: emp.email,
-        position: emp.position,
-        department: emp.department,
-        salary: emp.salary,
-        dateOfJoining: emp.dateOfJoining,
-        profileImage: emp.profileImage || null  
+      staffList.map((item) => ({
+        employee_id: item._id,
+        first_name: item.first_name,
+        last_name: item.last_name,
+        email: item.email,
+        position: item.position,
+        department: item.department,
+        salary: item.salary,
+        dateOfJoining: item.dateOfJoining,
+        profileImage: item.profileImage || null,
       }))
     );
   } catch (err) {
@@ -26,37 +28,39 @@ const getAllEmployees = async (req, res) => {
   }
 };
 
-// GET EMPLOYEE BY ID
-const getEmployeeById = async (req, res) => {
+// FETCH EMPLOYEE BY ID
+const fetchStaffById = async (req, res) => {
   try {
-    const emp = await Employee.findById(req.params.eid);
+    // Find employee by MongoID
+    const foundStaff = await StaffRecord.findById(req.params.eid);
 
-    if (!emp) {
+    if (!foundStaff) {
       return res.status(404).json({ status: false, message: "Employee not found" });
     }
 
-    return res.status(200).json(emp);
+    return res.status(200).json(foundStaff);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ status: false, message: "Server error" });
   }
 };
 
-// CREATE EMPLOYEE
-const createEmployee = async (req, res) => {
+// REGISTER/CREATE EMPLOYEE
+const addNewStaff = async (req, res) => {
   try {
-    const data = req.body;
+    const payload = req.body;
 
+    // Attach image if uploaded
     if (req.file) {
-      data.profileImage = req.file.filename;
+      payload.profileImage = req.file.filename;
     }
 
-    const newEmp = new Employee(data);
-    const savedEmp = await newEmp.save();
+    const staffEntry = new StaffRecord(payload);
+    const savedRecord = await staffEntry.save();
 
     res.status(201).json({
       message: "Employee created successfully",
-      employee_id: savedEmp._id
+      employee_id: savedRecord._id,
     });
   } catch (err) {
     console.error(err);
@@ -64,22 +68,23 @@ const createEmployee = async (req, res) => {
   }
 };
 
-// UPDATE EMPLOYEE
-const updateEmployee = async (req, res) => {
+// UPDATE EMPLOYEE DETAILS
+const modifyStaff = async (req, res) => {
   try {
-    const updateData = req.body;
+    const updatePayload = req.body;
 
+    // Update profile image if new file uploaded
     if (req.file) {
-      updateData.profileImage = req.file.filename;
+      updatePayload.profileImage = req.file.filename;
     }
 
-    const updatedEmp = await Employee.findByIdAndUpdate(
+    const updatedRecord = await StaffRecord.findByIdAndUpdate(
       req.params.eid,
-      updateData,
+      updatePayload,
       { new: true }
     );
 
-    if (!updatedEmp) {
+    if (!updatedRecord) {
       return res.status(404).json({ message: "Not found" });
     }
 
@@ -90,65 +95,67 @@ const updateEmployee = async (req, res) => {
   }
 };
 
-// DELETE EMPLOYEE
-const deleteEmployee = async (req, res) => {
+// REMOVE EMPLOYEE
+const removeStaff = async (req, res) => {
   try {
-    const deletedEmp = await Employee.findByIdAndDelete(req.params.eid);
+    const deleted = await StaffRecord.findByIdAndDelete(req.params.eid);
 
-    if (!deletedEmp) {
+    if (!deleted) {
       return res.status(404).json({ status: false, message: "Employee not found" });
     }
 
-    return res.status(204).send();
+    return res.status(204).send(); // No content
   } catch (err) {
     console.error(err);
     return res.status(500).json({ status: false, message: "Server error" });
   }
 };
 
-// SEARCH EMPLOYEES
-const searchEmployees = async (req, res) => {
+// SEARCH EMPLOYEES USING QUERY PARAMS
+const filterStaff = async (req, res) => {
   try {
     const { department, position } = req.query;
 
-    const query = {};
-    if (department) query.department = department;
-    if (position) query.position = position;
+    // Build dynamic search filter
+    const searchFilter = {};
+    if (department) searchFilter.department = department;
+    if (position) searchFilter.position = position;
 
-    const employees = await Employee.find(query);
+    const filteredList = await StaffRecord.find(searchFilter);
 
-    if (!employees || employees.length === 0) {
+    if (!filteredList || filteredList.length === 0) {
       return res.status(404).json({
         status: false,
         message: "No employees found matching criteria",
       });
     }
 
+    // Format the response
     return res.status(200).json(
-      employees.map(emp => ({
-        employee_id: emp._id,
-        first_name: emp.first_name,
-        last_name: emp.last_name,
-        email: emp.email,
-        position: emp.position,
-        department: emp.department,
-        salary: emp.salary,
-        dateOfJoining: emp.dateOfJoining,
-        profileImage: emp.profileImage || null 
+      filteredList.map((item) => ({
+        employee_id: item._id,
+        first_name: item.first_name,
+        last_name: item.last_name,
+        email: item.email,
+        position: item.position,
+        department: item.department,
+        salary: item.salary,
+        dateOfJoining: item.dateOfJoining,
+        profileImage: item.profileImage || null,
       }))
     );
-
   } catch (err) {
     console.error(err);
     return res.status(500).json({ status: false, message: "Server error" });
   }
 };
 
+// Export controllers
 module.exports = {
-  getAllEmployees,
-  getEmployeeById,
-  createEmployee,
-  updateEmployee,
-  deleteEmployee,
-  searchEmployees,
+  getAllEmployees: fetchAllStaff,
+  getEmployeeById: fetchStaffById,
+  createEmployee: addNewStaff,
+  updateEmployee: modifyStaff,
+  deleteEmployee: removeStaff,
+  searchEmployees: filterStaff,
 };

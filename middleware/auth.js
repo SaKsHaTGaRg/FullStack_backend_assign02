@@ -1,30 +1,35 @@
 const jwt = require("jsonwebtoken");
 
-const auth = (req, res, next) => {
+// Authentication middleware: verifies JWT token on protected routes
+const verifySession = (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
+    const rawHeader = req.headers.authorization;
 
-    if (!authHeader) {
+    // Check if authorization header exists
+    if (!rawHeader) {
       return res.status(401).json({ status: false, message: "No token provided" });
     }
 
-    // Accept both formats:
-    // "Bearer <token>" or just "<token>"
-    const parts = authHeader.split(" ");
-    const token = parts.length === 2 ? parts[1] : parts[0];
+    // Token can come as: "Bearer <token>" OR just "<token>"
+    const headerParts = rawHeader.split(" ");
+    const tokenValue = headerParts.length === 2 ? headerParts[1] : headerParts[0];
 
-    if (!token) {
+    if (!tokenValue) {
       return res.status(401).json({ status: false, message: "Invalid token format" });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    // Validate the JWT token using secret key
+    const tokenPayload = jwt.verify(tokenValue, process.env.JWT_SECRET);
 
+    // Attach decoded user info to request
+    req.user = tokenPayload;
+
+    // Allow access to the next middleware/controller
     next();
   } catch (err) {
     console.error(err);
-    res.status(401).json({ status: false, message: "Unauthorized" });
+    return res.status(401).json({ status: false, message: "Unauthorized" });
   }
 };
 
-module.exports = auth;
+module.exports = verifySession;
