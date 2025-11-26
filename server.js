@@ -1,40 +1,27 @@
-//express and mongo db setup
+// express and mongodb setup
 const express = require("express");
-const mongoose = require("mongoose"); 
-const dotenv = require("dotenv");
+const mongoose = require("mongoose");
 const cors = require("cors");
-
 require("dotenv").config();
 
 const app = express();
 
-// Middleware
+// ------------------------
+// GLOBAL MIDDLEWARE
+// ------------------------
 app.use(express.json());
+
+// Make uploads folder public
 app.use("/uploads", express.static("uploads"));
 
-// CORS — MUST BE BEFORE ROUTES!!!
-// app.use(
-//   cors({
-//     origin: function (origin, callback) {
-//       if (
-//         !origin ||
-//         origin.includes("localhost") ||
-//         /vercel\.app$/.test(origin)
-//       ) {
-//         callback(null, true);
-//       } else {
-//         callback(new Error("Not allowed by CORS"));
-//       }
-//     },
-//     credentials: true,
-//   })
-// );
-
+// ------------------------
+// CORS CONFIG (IMPORTANT FOR RENDER + VERCEL)
+// ------------------------
 app.use(
   cors({
     origin: [
-      "https://101512083-comp-3123-assignment2-fro-three.vercel.app",
-      "http://localhost:3000",
+      "https://101512083-comp-3123-assignment2-fro-three.vercel.app", // your frontend URL
+      "http://localhost:3000",                                        // local dev
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -42,22 +29,33 @@ app.use(
   })
 );
 
-// Connect MongoDB
-mongoose.connect(process.env.MONGO_URI, {
-  dbName: "assign01",
-});
+// ------------------------
+// MONGO DB CONNECTION
+// ------------------------
+mongoose
+  .connect(process.env.MONGO_URI, {
+    dbName: "assign01",
+  })
+  .then(() => console.log("🔥 MongoDB Connected Successfully"))
+  .catch((err) => console.error("❌ MongoDB Connection Error:", err));
 
-// test route
+// ------------------------
+// TEST ROUTE
+// ------------------------
 app.get("/", (req, res) => {
   res.json({ message: "Hello from server!" });
 });
 
-// API routes WITH PREFIX
+// ------------------------
+// API ROUTES
+// ------------------------
 app.use("/api/v1/user", require("./routes/userRoutes"));
 app.use("/api/v1/employee", require("./routes/employeeRoutes"));
 
-// Start server
+// ------------------------
+// START SERVER
+// ------------------------
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
